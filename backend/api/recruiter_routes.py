@@ -176,7 +176,7 @@ async def draft_rejection(req: RejectionDraftRequest):
     
     if GEMINI_API_KEY:
         try:
-            model = genai.GenerativeModel("gemini-2.5-flash-lite")
+            model = genai.GenerativeModel(GEMINI_MODEL)
             response = model.generate_content(prompt)
             draft = response.text.strip()
         except Exception as e:

@@ -38,11 +38,11 @@ class LongTermMemory:
         
         try:
             result = genai.embed_content(
-                model="models/embedding-001",
+                model="models/gemini-embedding-001",
                 content=text,
                 task_type="retrieval_document"
             )
-            return result["embedding"]
+            return result["embedding"][:768]
         except Exception as e:
             logger.error(f"Error calling Gemini Embeddings: {e}")
             np.random.seed(sum(ord(c) for c in text) % 1000)

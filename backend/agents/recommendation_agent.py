@@ -56,7 +56,7 @@ def run_recommendation_agent(state: AgentState) -> AgentState:
                 Write a 3-4 sentence message inviting them to schedule a call. Keep it professional, friendly, and direct. Avoid generic boilerplate templates.
                 """
                 try:
-                    model = genai.GenerativeModel("gemini-2.5-flash-lite")
+                    model = genai.GenerativeModel(settings.GEMINI_MODEL)
                     response = model.generate_content(prompt)
                     card.outreach_draft = response.text.strip()
                 except Exception as e:
