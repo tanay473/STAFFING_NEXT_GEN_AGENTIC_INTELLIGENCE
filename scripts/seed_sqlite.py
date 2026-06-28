@@ -166,6 +166,91 @@ def seed_database():
             "resume_summary": "Backend specialist focused on scalable APIs and containerized deployments.",
             "stability_score": 85.0,
             "status": "Active"
+        },
+        {
+            "id": "CAND-005",
+            "name": "Devin Cole",
+            "email": "devin.cole@email.com",
+            "phone": "555-0105",
+            "skills": json.dumps(["Python", "FastAPI", "Django", "PostgreSQL", "Redis", "Celery"]),
+            "experience_years": 5,
+            "expected_salary": 118000.0,
+            "availability_date": "2026-07-01",
+            "job_history": json.dumps([
+                {"company": "Apex SaaS", "role": "Backend Developer", "duration_months": 24, "reason_for_leaving": "Career growth"},
+                {"company": "CodeHouse", "role": "Software Developer", "duration_months": 36, "reason_for_leaving": "Relocated"}
+            ]),
+            "resume_summary": "FastAPI specialist with expertise in background task queues and relational database optimization.",
+            "stability_score": 90.0,
+            "status": "Active"
+        },
+        {
+            "id": "CAND-006",
+            "name": "Fiona Gallagher",
+            "email": "fiona.g@email.com",
+            "phone": "555-0106",
+            "skills": json.dumps(["React", "TypeScript", "Next.js", "TailwindCSS", "Node.js", "Docker"]),
+            "experience_years": 4,
+            "expected_salary": 105000.0,
+            "availability_date": "2026-07-15",
+            "job_history": json.dumps([
+                {"company": "SouthSide UI", "role": "Frontend developer", "duration_months": 18, "reason_for_leaving": "Contract complete"},
+                {"company": "Gallagher Tech", "role": "React contractor", "duration_months": 24, "reason_for_leaving": "Seeking permanent position"}
+            ]),
+            "resume_summary": "Full stack Javascript developer with a focus on modern user interfaces and SSR deployment pipelines.",
+            "stability_score": 80.0,
+            "status": "Active"
+        },
+        {
+            "id": "CAND-007",
+            "name": "George Miller",
+            "email": "george.miller@email.com",
+            "phone": "555-0107",
+            "skills": json.dumps(["AWS", "Kubernetes", "Docker", "Terraform", "Go", "Python"]),
+            "experience_years": 10,
+            "expected_salary": 160000.0,
+            "availability_date": "2026-08-01",
+            "job_history": json.dumps([
+                {"company": "CloudSphere", "role": "Principal DevOps Architect", "duration_months": 48, "reason_for_leaving": "Mandate concluded"},
+                {"company": "Infrastructure Lab", "role": "Senior Cloud Infrastructure", "duration_months": 60, "reason_for_leaving": "Desired remote shift"}
+            ]),
+            "resume_summary": "DevOps Architect specializing in Infrastructure as Code (IaC) and container orchestration at enterprise scale.",
+            "stability_score": 100.0,
+            "status": "Active"
+        },
+        {
+            "id": "CAND-008",
+            "name": "Hana Takahashi",
+            "email": "hana.t@email.com",
+            "phone": "555-0108",
+            "skills": json.dumps(["Vue.js", "JavaScript", "HTML/CSS", "Nuxt.js", "Node.js"]),
+            "experience_years": 3,
+            "expected_salary": 95000.0,
+            "availability_date": "2026-07-01",
+            "job_history": json.dumps([
+                {"company": "Tokyo Web Co", "role": "Junior Frontend developer", "duration_months": 12, "reason_for_leaving": "Company reorganization"},
+                {"company": "Osaka Software", "role": "Web Engineer", "duration_months": 24, "reason_for_leaving": "Seeking remote agency contract"}
+            ]),
+            "resume_summary": "Vue.js enthusiast with a track record of building performant single-page applications and static sites.",
+            "stability_score": 75.0,
+            "status": "Active"
+        },
+        {
+            "id": "CAND-009",
+            "name": "Ivan Petrov",
+            "email": "ivan.p@email.com",
+            "phone": "555-0109",
+            "skills": json.dumps(["Java", "Spring Boot", "Microservices", "Oracle", "Kafka", "Kubernetes"]),
+            "experience_years": 7,
+            "expected_salary": 130000.0,
+            "availability_date": "2026-07-15",
+            "job_history": json.dumps([
+                {"company": "Siberian Banking Group", "role": "Spring Boot Developer", "duration_months": 36, "reason_for_leaving": "Seeking international projects"},
+                {"company": "UralTech", "role": "Java Engineer", "duration_months": 40, "reason_for_leaving": "Company downsized"}
+            ]),
+            "resume_summary": "Senior Java Developer focusing on Spring Boot microservices, transaction safety, and stream pipelines.",
+            "stability_score": 92.0,
+            "status": "Active"
         }
     ]
 
