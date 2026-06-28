@@ -25,24 +25,64 @@ def extract_text_from_pdf(pdf_path: str) -> str:
         logger.error(f"Error reading PDF: {e}")
         return f"Error reading resume at path: {pdf_path}"
 
+def parse_resume_fallback_regex(resume_text: str) -> dict:
+    """Fallback parser using regex to extract candidate details when Gemini is rate-limited or disabled."""
+    import re
+    
+    # 1. Extract Email
+    email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', resume_text)
+    email = email_match.group(0) if email_match else "unknown@email.com"
+    
+    # 2. Extract Phone
+    phone_match = re.search(r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', resume_text)
+    phone = phone_match.group(0) if phone_match else "N/A"
+    
+    # 3. Extract Name (Typically the first non-empty line under 40 chars that doesn't contain digits or emails)
+    name = "Unknown Candidate"
+    lines = [line.strip() for line in resume_text.split('\n') if line.strip()]
+    if lines:
+        for line in lines[:4]:
+            if "@" not in line and not re.search(r'\d{5}', line) and len(line) < 35:
+                # Remove common header noise
+                clean_line = re.sub(r'(resume|cv|curriculum vitae|contact|profile)', '', line, flags=re.IGNORECASE).strip()
+                if clean_line:
+                    name = clean_line
+                    break
+                
+    # 4. Search for matching skills
+    known_skills = [
+        "React", "TypeScript", "JavaScript", "HTML", "CSS", "Node.js", "Express", 
+        "Redux", "Vue.js", "Angular", "Python", "Django", "FastAPI", "Flask", 
+        "Java", "Spring Boot", "AWS", "Docker", "Kubernetes", "SQL", "PostgreSQL", 
+        "MySQL", "MongoDB", "Redis", "Kafka", "Git", "GitHub", "Next.js", "Jest",
+        "React Native", "TailwindCSS", "Terraform", "Google Cloud", "Azure", "GraphQL"
+    ]
+    detected_skills = []
+    for skill in known_skills:
+        if re.search(rf'\b{re.escape(skill)}\b', resume_text, re.IGNORECASE):
+            detected_skills.append(skill)
+            
+    # 5. Estimate Experience Years
+    exp_match = re.search(r'(\d+)\+?\s*years?\s+(?:of\s+)?experience', resume_text, re.IGNORECASE)
+    experience_years = int(exp_match.group(1)) if exp_match else 4
+    
+    return {
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "skills": detected_skills,
+        "experience_years": experience_years,
+        "expected_salary": 115000.0,
+        "availability_date": "Immediate",
+        "job_history": [],
+        "resume_summary": "Extracted via local pattern matching (LLM Quota Limit Fallback)."
+    }
+
 def parse_resume_text(resume_text: str) -> dict:
-    """Uses Gemini to parse resume text into a structured schema matching the Candidate model."""
+    """Uses Gemini to parse resume text, falling back to a regex parser if rate-limited."""
     if not settings.GEMINI_API_KEY:
-        logger.warning("GEMINI_API_KEY not found. Returning structured mock candidate.")
-        return {
-            "name": "Sarah Jenkins",
-            "email": "sarah.jenkins@email.com",
-            "phone": "555-0101",
-            "skills": ["React", "TypeScript", "Node.js"],
-            "experience_years": 6,
-            "expected_salary": 125000,
-            "availability_date": "2026-07-15",
-            "job_history": [
-                {"company": "Apex Fintech", "role": "Senior Frontend Engineer", "duration_months": 36, "reason_for_leaving": "Career advancement"},
-                {"company": "PayWise", "role": "Software Engineer", "duration_months": 24, "reason_for_leaving": "Company downsized"}
-            ],
-            "resume_summary": "Experienced frontend engineer with a background in secure banking UIs and state management."
-        }
+        logger.warning("GEMINI_API_KEY not found. Running regex fallback parser.")
+        return parse_resume_fallback_regex(resume_text)
 
     prompt = f"""
     You are an expert recruiter assistant.
@@ -60,13 +100,13 @@ def parse_resume_text(resume_text: str) -> dict:
         - duration_months: Length of time at job in months (integer)
         - reason_for_leaving: Reason if mentioned, or null (string or null)
     - resume_summary: A 1-2 sentence professional summary of the candidate's career highlights.
-
+    
     Resume Text:
     {resume_text}
     """
 
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")
         try:
             response = model.generate_content(
                 prompt,
@@ -87,16 +127,5 @@ def parse_resume_text(resume_text: str) -> dict:
             
         return json.loads(text.strip())
     except Exception as e:
-        logger.error(f"Gemini resume parsing failed: {e}")
-        # Return basic structural fallback
-        return {
-            "name": "Unknown Candidate",
-            "email": "unknown@email.com",
-            "phone": "N/A",
-            "skills": [],
-            "experience_years": 0,
-            "expected_salary": 0.0,
-            "availability_date": "Immediate",
-            "job_history": [],
-            "resume_summary": "Raw parsing failed. See text logs."
-        }
+        logger.error(f"Gemini resume parsing failed: {e}. Executing local regex fallback parser...")
+        return parse_resume_fallback_regex(resume_text)

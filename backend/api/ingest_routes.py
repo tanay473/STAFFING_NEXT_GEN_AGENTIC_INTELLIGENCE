@@ -41,15 +41,15 @@ async def upload_candidate_resume(file: UploadFile = File(...)):
         stability_score = round(stability_score, 1)
 
         candidate_id = f"CAND-{str(uuid.uuid4())[:8].upper()}"
-        name = parsed_profile.get("name", "Unknown Candidate")
-        email = parsed_profile.get("email", "unknown@email.com")
-        phone = parsed_profile.get("phone", "555-0000")
-        skills = json.dumps(parsed_profile.get("skills", []))
-        experience_years = parsed_profile.get("experience_years", 0)
-        expected_salary = parsed_profile.get("expected_salary", 110000.0)
-        availability_date = parsed_profile.get("availability_date", "Immediate")
+        name = parsed_profile.get("name") or "Unknown Candidate"
+        email = parsed_profile.get("email") or "unknown@email.com"
+        phone = parsed_profile.get("phone") or "555-0000"
+        skills = json.dumps(parsed_profile.get("skills") or [])
+        experience_years = parsed_profile.get("experience_years") or 0
+        expected_salary = parsed_profile.get("expected_salary") or 110000.0
+        availability_date = parsed_profile.get("availability_date") or "Immediate"
         job_history = json.dumps(job_history_list)
-        resume_summary = parsed_profile.get("resume_summary", "")
+        resume_summary = parsed_profile.get("resume_summary") or ""
         status = "Active"
 
         # 4. Save to SQL Database (Insert or Update if email exists)

@@ -28,15 +28,15 @@ def run_ingest_agent(state: AgentState) -> AgentState:
             
             job_order = JobOrder(
                 id=job_id,
-                client_id=parsed_data.get("client_id", "CLI-001"), # default/fallback
-                client_name=parsed_data.get("client_name", "Unknown Client"),
-                role_name=parsed_data.get("role_name", "Software Engineer"),
-                required_skills=parsed_data.get("required_skills", []),
-                nice_to_have_skills=parsed_data.get("nice_to_have_skills", []),
-                budget_max=parsed_data.get("budget_max", 120000.0),
-                location=parsed_data.get("location", "Remote"),
-                duration_type=parsed_data.get("duration_type", "Full-time"),
-                timeline=parsed_data.get("timeline", "3 weeks"),
+                client_id=parsed_data.get("client_id") or "CLI-001",
+                client_name=parsed_data.get("client_name") or "Unknown Client",
+                role_name=parsed_data.get("role_name") or "Software Engineer",
+                required_skills=parsed_data.get("required_skills") or [],
+                nice_to_have_skills=parsed_data.get("nice_to_have_skills") or [],
+                budget_max=parsed_data.get("budget_max") or 120000.0,
+                location=parsed_data.get("location") or "Remote",
+                duration_type=parsed_data.get("duration_type") or "Full-time",
+                timeline=parsed_data.get("timeline") or "3 weeks",
                 created_at=created_at,
                 sla_deadline=sla_deadline
             )

@@ -144,7 +144,7 @@ def run_reasoning_agent(state: AgentState) -> AgentState:
                 }}
                 """
                 try:
-                    model = genai.GenerativeModel("gemini-2.5-flash")
+                    model = genai.GenerativeModel("gemini-2.5-flash-lite")
                     response = model.generate_content(prompt)
                     text = response.text.strip()
                     if text.startswith("```json"):
