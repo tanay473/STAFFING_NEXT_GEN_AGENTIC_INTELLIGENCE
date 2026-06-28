@@ -1,0 +1,26 @@
+# Node / Frontend dependencies
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Python Caches & Environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+ENV/
+env/
+
+# Credentials & Database
+.env
+.env.local
+.env.*.local
+data/*.db
+
+# Logs & temp files
+*.log
+.system_generated/
