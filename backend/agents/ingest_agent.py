@@ -26,10 +26,22 @@ def run_ingest_agent(state: AgentState) -> AgentState:
             created_at = datetime.datetime.utcnow().isoformat()
             sla_deadline = (datetime.datetime.utcnow() + datetime.timedelta(days=3)).isoformat() # SLA default 72h
             
+            client_name = parsed_data.get("client_name")
+            if not client_name or client_name.strip() in ("", "Unknown Client"):
+                import random
+                sleek_companies = [
+                    "Aether Solutions", "Apex Global", "Zenith Technologies", 
+                    "Vortex Finance", "Quantum Leap Partners", "Prism Digital", 
+                    "Helix Systems", "Nexa Corp", "Stratis AI", "Velocity Ventures"
+                ]
+                client_name = random.choice(sleek_companies)
+            else:
+                client_name = client_name.strip()
+            
             job_order = JobOrder(
                 id=job_id,
                 client_id=parsed_data.get("client_id") or "CLI-001",
-                client_name=parsed_data.get("client_name") or "Unknown Client",
+                client_name=client_name,
                 role_name=parsed_data.get("role_name") or "Software Engineer",
                 required_skills=parsed_data.get("required_skills") or [],
                 nice_to_have_skills=parsed_data.get("nice_to_have_skills") or [],
