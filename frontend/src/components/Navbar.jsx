@@ -81,49 +81,28 @@ export default function Navbar() {
             <Bell size={18} />
             {alerts.length > 0 && <span className="nav-badge">{alerts.length}</span>}
           </button>
-          
           {showDropdown && (
-            <div className="nav-dropdown glass-panel" style={{
-              position: 'absolute',
-              right: 0,
-              top: '120%',
-              width: '320px',
-              padding: '1rem',
-              zIndex: 1000,
-              background: 'rgba(17, 24, 39, 0.95)',
-              border: '1px solid var(--border-glass)',
-              borderRadius: '12px',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-            }}>
-              <h4 style={{ color: '#FFF', fontSize: '0.95rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
-                Recent Activity Alerts ({alerts.length})
-              </h4>
-              <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="nav-dropdown">
+              <div className="nav-dropdown-header">
+                <span>Recent Activity Alerts ({alerts.length})</span>
+              </div>
+              <div className="nav-dropdown-list">
                 {alerts.length === 0 ? (
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', padding: '1rem 0' }}>
                     All clear! No notifications.
                   </p>
                 ) : (
                   alerts.map(alert => (
-                    <div key={alert.id} style={{
-                      fontSize: '0.8rem',
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '6px',
-                      background: alert.severity === 'high' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
-                      borderLeft: `3px solid ${alert.severity === 'high' ? '#EF4444' : '#F59E0B'}`,
-                      color: '#FFF',
-                      textAlign: 'left'
-                    }}>
-                      <div style={{ fontWeight: 600 }}>{alert.title}</div>
-                      <div style={{ color: 'var(--text-muted)', marginTop: '0.2rem', fontSize: '0.75rem', lineHeight: '1.3' }}>
-                        {alert.message}
-                      </div>
+                    <div key={alert.id} className={`nav-dropdown-item ${alert.severity}`}>
+                      <div className="nav-dropdown-title">{alert.title}</div>
+                      <div className="nav-dropdown-desc">{alert.message}</div>
                     </div>
                   ))
                 )}
               </div>
             </div>
           )}
+
         </div>
 
         <div className="nav-profile">
