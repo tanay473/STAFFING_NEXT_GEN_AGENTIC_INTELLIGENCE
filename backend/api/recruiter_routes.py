@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import google.generativeai as genai
-from backend.config.settings import GEMINI_API_KEY
+from backend.config.settings import GEMINI_API_KEY, GEMINI_MODEL
 from backend.models.action_card import ActionCard
 from backend.agents.planner import planner_app
 from backend.agents.engagement_monitor import check_engagement_alerts

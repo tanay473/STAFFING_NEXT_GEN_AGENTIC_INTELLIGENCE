@@ -384,7 +384,7 @@ export default function PriorityQueue({ apiHost }) {
                   {/* Evidence Chain Panel */}
                   <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
                     <h5 style={{ color: 'var(--brand-info)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Evidence Chain</h5>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', marginTop: '0.25rem' }}>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', marginTop: '0.25rem', whiteSpace: 'pre-line' }}>
                       {card.evidence_chain.assessment}
                     </p>
                     {card.evidence_chain.benchmarks && (

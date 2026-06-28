@@ -106,7 +106,7 @@ def parse_resume_text(resume_text: str) -> dict:
     """
 
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        model = genai.GenerativeModel(settings.GEMINI_MODEL)
         try:
             response = model.generate_content(
                 prompt,

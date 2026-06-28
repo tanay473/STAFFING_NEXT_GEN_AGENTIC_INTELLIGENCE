@@ -19,6 +19,8 @@ SQLITE_DB_PATH = str(DATA_DIR / "crm.db")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 if not GEMINI_API_KEY or GEMINI_API_KEY.startswith("your_"):
     GEMINI_API_KEY = ""
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
 
 # Redis Config (Short term memory)
 USE_REDIS = os.getenv("USE_REDIS", "False").lower() in ("true", "1", "yes")

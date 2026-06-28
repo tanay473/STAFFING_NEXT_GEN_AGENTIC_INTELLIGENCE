@@ -57,6 +57,52 @@ def calculate_stability_score(job_history) -> float:
     score = 100.0 - (short_stays * 25.0)
     return max(0.0, score)
 
+def generate_validation_thought_process(cand, job_order, skill_score, salary_score, avail_score, stability_score) -> str:
+    req_skills = job_order.required_skills or []
+    req_set = set(s.lower() for s in req_skills)
+    cand_skills = cand.skills or []
+    cand_set = set(s.lower() for s in cand_skills)
+    matched_req = req_set.intersection(cand_set)
+    matched_nice = set(s.lower() for s in (job_order.nice_to_have_skills or [])).intersection(cand_set)
+    
+    skill_pct = round(skill_score, 1)
+    if req_set:
+        skill_str = f"Matches {len(matched_req)}/{len(req_set)} core skills"
+        if matched_req:
+            skill_str += f" ({', '.join(list(matched_req)[:3])})"
+    else:
+        skill_str = "No required skills specified in JD"
+        
+    skill_points = f"• Technical Alignment ({skill_pct}%): {skill_str}."
+    if matched_nice:
+        skill_points += f" Plus bonus nice-to-have skills: {', '.join(list(matched_nice)[:3])}."
+    
+    salary_pct = round(salary_score, 1)
+    if cand.expected_salary <= job_order.budget_max:
+        salary_points = f"• Financial Alignment ({salary_pct}%): Expected salary of ${cand.expected_salary:,.0f} is within client's maximum budget cap of ${job_order.budget_max:,.0f}."
+    else:
+        salary_points = f"• Financial Alignment ({salary_pct}%): Expected salary of ${cand.expected_salary:,.0f} exceeds client's maximum budget of ${job_order.budget_max:,.0f}."
+        
+    stability_pct = round(stability_score, 1)
+    if stability_score >= 80:
+        stability_points = f"• Professional Stability ({stability_pct}%): Demonstrates strong job retention history with {cand.experience_years} years of total experience."
+    elif stability_score >= 50:
+        stability_points = f"• Professional Stability ({stability_pct}%): Moderate stability rating with some short-term stays in history."
+    else:
+        stability_points = f"• Professional Stability ({stability_pct}%): Low stability rating; multiple short-term job transitions flagged."
+
+    avail_pct = round(avail_score, 1)
+    avail_points = f"• Timeline Alignment ({avail_pct}%): Target availability is {cand.availability_date or 'immediate'}."
+    
+    points = [
+        f"Validation Thought Process for {cand.name}:",
+        skill_points,
+        salary_points,
+        stability_points,
+        avail_points
+    ]
+    return "\n".join(points)
+
 def run_reasoning_agent(state: AgentState) -> AgentState:
     """Reasoning Agent node: Analyzes fit metrics, scores profiles, and flags compliance risks."""
     logger.info("Running Reasoning Agent...")
@@ -134,13 +180,15 @@ def run_reasoning_agent(state: AgentState) -> AgentState:
                 Identify:
                 1. Top 3 reasons to submit this candidate.
                 2. Top 1 or 2 risk flags (e.g. salary expectations, short job stays, lack of specific framework, availability gap).
-                3. A professional assessment/justification.
+                3. A professional assessment/validation thought process based on the candidate's details and JD criteria (skills, salary, stability, and timeline).
                 
-                Provide response in strict JSON format:
+                Provide response in strict JSON format. The 'assessment' field must contain a step-by-step point validation thought process, with each point starting on a new line with a bullet symbol (e.g. "• Technical Alignment: ...\\n• Financial Alignment: ...\\n• Professional Stability: ...\\n• Timeline Alignment: ...").
+                
+                JSON Format:
                 {{
                     "reasons": ["reason 1", "reason 2", "reason 3"],
                     "risks": ["risk 1", "risk 2"],
-                    "assessment": "Brief analytical summary"
+                    "assessment": "• Technical Alignment: ...\\n• Financial Alignment: ...\\n• Professional Stability: ...\\n• Timeline Alignment: ..."
                 }}
                 """
                 try:
@@ -156,7 +204,11 @@ def run_reasoning_agent(state: AgentState) -> AgentState:
                     llm_res = json.loads(text.strip())
                     analysis_reasons = llm_res.get("reasons", [])
                     analysis_risks = llm_res.get("risks", [])
-                    assessment = llm_res.get("assessment", "Analytical assessment computed.")
+                    assessment = llm_res.get("assessment", "")
+                    if not assessment or not assessment.strip().startswith("•"):
+                        assessment = generate_validation_thought_process(
+                            cand, job_order, skill_score, salary_score, avail_score, stability_score
+                        )
                 except Exception as e:
                     logger.error(f"Gemini evaluation failed for {cand.name}: {e}")
                     analysis_reasons = [
@@ -169,7 +221,9 @@ def run_reasoning_agent(state: AgentState) -> AgentState:
                         analysis_risks.append("Short job durations flagged in recent history.")
                     if cand.expected_salary > job_order.budget_max:
                         analysis_risks.append(f"Expected salary of {cand.expected_salary} is above client limit of {job_order.budget_max}.")
-                    assessment = f"Profile shows {skill_score}% skill alignment with standard budget clearance (API Fallback)."
+                    assessment = generate_validation_thought_process(
+                        cand, job_order, skill_score, salary_score, avail_score, stability_score
+                    )
             else:
                 # Mock qualitative output if no key
                 analysis_reasons = [
@@ -182,7 +236,9 @@ def run_reasoning_agent(state: AgentState) -> AgentState:
                     analysis_risks.append("Short job durations flagged in recent history.")
                 if cand.expected_salary > job_order.budget_max:
                     analysis_risks.append(f"Expected salary of {cand.expected_salary} is above client limit of {job_order.budget_max}.")
-                assessment = f"Profile shows {skill_score}% skill alignment with standard budget clearance."
+                assessment = generate_validation_thought_process(
+                    cand, job_order, skill_score, salary_score, avail_score, stability_score
+                )
 
             # Construct action card metadata / fit breakdown
             fit_breakdown = {
