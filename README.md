@@ -484,6 +484,3 @@ Open `http://localhost:3000/recruiter` for the recruiter view and `http://localh
 
 ---
 
-## 📄 License
-
-MIT
