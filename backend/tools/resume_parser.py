@@ -67,11 +67,25 @@ def parse_resume_text(resume_text: str) -> dict:
 
     try:
         model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
-        return json.loads(response.text)
+        try:
+            response = model.generate_content(
+                prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
+        except Exception:
+            # Fallback if response_mime_type config isn't supported in local SDK version
+            response = model.generate_content(prompt)
+            
+        text = response.text.strip()
+        # Strip markdown fences if present
+        if text.startswith("```json"):
+            text = text[7:]
+        elif text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+            
+        return json.loads(text.strip())
     except Exception as e:
         logger.error(f"Gemini resume parsing failed: {e}")
         # Return basic structural fallback

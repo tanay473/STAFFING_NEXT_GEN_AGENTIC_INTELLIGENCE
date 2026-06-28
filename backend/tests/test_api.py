@@ -51,7 +51,21 @@ def test_client_status_endpoint():
     assert response.status_code == 200
     assert "pipeline" in response.json()
 
+def test_resume_upload_endpoint():
+    """Tests the /ingest/upload/resume endpoint."""
+    file_payload = {
+        "file": ("test_resume.pdf", b"%PDF-1.4 mock resume content. Elena Rostova, elena.r@email.com, 555-0103. React, Jest. expected salary: 115000", "application/pdf")
+    }
+    response = client.post("/ingest/upload/resume", files=file_payload)
+    print(f"Resume Upload Response Code: {response.status_code}")
+    print(f"Resume Upload Response JSON: {response.json()}")
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    assert "candidate_id" in response.json()
+    assert "parsed_profile" in response.json()
+
 if __name__ == "__main__":
     test_recruiter_digest_endpoint()
     test_rejection_draft_endpoint()
     test_client_status_endpoint()
+    test_resume_upload_endpoint()

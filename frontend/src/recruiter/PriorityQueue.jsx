@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, AlertTriangle, Send, Check, Trash2, Eye, Edit3 } from 'lucide-react';
+import { Sparkles, AlertTriangle, Send, Check, Trash2, Eye, Edit3, UploadCloud, UserPlus } from 'lucide-react';
 
 export default function PriorityQueue({ apiHost }) {
   const [jdText, setJdText] = useState("We need a Senior React Developer, 5+ years, fintech experience, remote, starting in 3 weeks.");
@@ -13,6 +13,8 @@ export default function PriorityQueue({ apiHost }) {
   const [loadingRejectionDraft, setLoadingRejectionDraft] = useState(false);
   const [editId, setEditId] = useState(null);
   const [editDraft, setEditDraft] = useState("");
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(null);
 
   const fetchQueue = async () => {
     try {
@@ -121,6 +123,38 @@ export default function PriorityQueue({ apiHost }) {
     }
   };
 
+  const handleResumeUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setUploadingResume(true);
+    setUploadSuccess(null);
+    try {
+      const res = await fetch(`${apiHost}/ingest/upload/resume`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        setUploadSuccess({
+          name: data.parsed_profile.name,
+          id: data.parsed_profile.id,
+          skills: data.parsed_profile.skills || []
+        });
+      } else {
+        alert("Failed parsing candidate resume PDF.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error uploading candidate resume.");
+    } finally {
+      setUploadingResume(false);
+    }
+  };
+
   const handleAction = async (cardId, decision, notes = "", edits = "") => {
     try {
       const res = await fetch(`${apiHost}/recruiter/action`, {
@@ -146,36 +180,40 @@ export default function PriorityQueue({ apiHost }) {
 
   return (
     <div>
-      {/* 1. Job Intake Panel */}
-      <div className="glass-panel jd-input-panel" style={{ marginBottom: '1.5rem' }}>
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)' }}>
-          <Sparkles size={20} color="#6366F1" /> Client Job Intake
-        </h3>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-          Paste raw requirements or upload a PDF job description to execute the LangGraph matching sequence.
-        </p>
+      {/* Dynamic Cockpit Panels Grid */}
+      <div className="cockpit-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
         
-        <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', marginTop: '0.75rem' }}>
-          <textarea
-            className="textarea-jd"
-            value={jdText}
-            onChange={(e) => setJdText(e.target.value)}
-            placeholder="Paste requirements..."
-            style={{ margin: 0 }}
-          />
+        {/* 1. Job Intake Panel */}
+        <div className="glass-panel jd-input-panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)' }}>
+              <Sparkles size={20} color="#6366F1" /> Client Job Intake
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+              Paste raw requirements or upload a PDF job description to execute the LangGraph matching sequence.
+            </p>
+            
+            <textarea
+              className="textarea-jd"
+              value={jdText}
+              onChange={(e) => setJdText(e.target.value)}
+              placeholder="Paste requirements..."
+              style={{ margin: '0.75rem 0 0', height: '100px' }}
+            />
+          </div>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
             <button
               className="btn btn-approve"
               style={{ width: 'auto', padding: '0.6rem 1.2rem', margin: 0 }}
               onClick={triggerPlanner}
               disabled={loading}
             >
-              {loading ? "Orchestrating Agents..." : "Run Matching Planner"}
+              {loading ? "Orchestrating..." : "Run Matching Planner"}
             </button>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Or Upload PDF:</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Or PDF:</span>
               <input
                 type="file"
                 accept=".pdf"
@@ -188,12 +226,79 @@ export default function PriorityQueue({ apiHost }) {
                   padding: '0.4rem',
                   borderRadius: '6px',
                   border: '1px solid var(--border-glass)',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  width: '160px'
                 }}
               />
             </div>
           </div>
         </div>
+
+        {/* 2. Candidate Talent Intake Panel */}
+        <div className="glass-panel jd-input-panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)' }}>
+              <UserPlus size={20} color="#10B981" /> Talent Pool Intake
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+              Upload candidate resume PDF to automatically extract details using Gemini AI and register them in the matching database.
+            </p>
+          </div>
+          
+          <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{
+              border: '2px dashed rgba(255,255,255,0.1)',
+              borderRadius: '8px',
+              padding: '1rem',
+              textAlign: 'center',
+              background: 'rgba(255,255,255,0.01)',
+              position: 'relative',
+              cursor: 'pointer'
+            }}>
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleResumeUpload}
+                disabled={uploadingResume}
+                style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  opacity: 0,
+                  cursor: 'pointer',
+                  width: '100%',
+                  height: '100%'
+                }}
+              />
+              <UploadCloud size={24} color="var(--text-muted)" style={{ margin: '0 auto 0.4rem' }} />
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: 600 }}>
+                {uploadingResume ? "Analyzing resume with Gemini AI..." : "Click to select resume PDF"}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                PDF format limit: 5MB
+              </div>
+            </div>
+
+            {uploadSuccess && (
+              <div style={{
+                background: 'rgba(16, 185, 129, 0.08)',
+                border: '1px solid rgba(16, 185, 129, 0.2)',
+                borderRadius: '8px',
+                padding: '0.75rem',
+                fontSize: '0.8rem',
+                color: '#FFF',
+                textAlign: 'left'
+              }}>
+                <div style={{ fontWeight: 600, color: 'var(--brand-success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  ✓ Registered {uploadSuccess.name} ({uploadSuccess.id})
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  Skills: {uploadSuccess.skills.join(', ')}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
 
        <div className="dashboard-grid">

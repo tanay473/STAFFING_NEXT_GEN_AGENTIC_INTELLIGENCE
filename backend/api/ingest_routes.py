@@ -2,6 +2,8 @@ import logging
 import shutil
 import uuid
 import os
+import sqlite3
+import json
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from backend.tools.resume_parser import extract_text_from_pdf, parse_resume_text
 from backend.config import settings
@@ -11,7 +13,7 @@ router = APIRouter(prefix="/ingest", tags=["Data Ingestion"])
 
 @router.post("/upload/resume")
 async def upload_candidate_resume(file: UploadFile = File(...)):
-    """Receives resume PDF file, extracts and parses skills/history using PyMuPDF + Gemini."""
+    """Receives resume PDF file, extracts and parses skills/history using PyMuPDF + Gemini, and saves to database."""
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF resumes are supported.")
 
@@ -28,10 +30,59 @@ async def upload_candidate_resume(file: UploadFile = File(...)):
         # 2. Extract structured profile fields via LLM
         parsed_profile = parse_resume_text(raw_text)
         
+        # 3. Calculate stability score based on job history tenure
+        job_history_list = parsed_profile.get("job_history", [])
+        if job_history_list:
+            durations = [j.get("duration_months", 12) or 12 for j in job_history_list]
+            avg_tenure = sum(durations) / len(durations)
+            stability_score = min(100.0, max(10.0, avg_tenure * 2.7))
+        else:
+            stability_score = 80.0
+        stability_score = round(stability_score, 1)
+
+        candidate_id = f"CAND-{str(uuid.uuid4())[:8].upper()}"
+        name = parsed_profile.get("name", "Unknown Candidate")
+        email = parsed_profile.get("email", "unknown@email.com")
+        phone = parsed_profile.get("phone", "555-0000")
+        skills = json.dumps(parsed_profile.get("skills", []))
+        experience_years = parsed_profile.get("experience_years", 0)
+        expected_salary = parsed_profile.get("expected_salary", 110000.0)
+        availability_date = parsed_profile.get("availability_date", "Immediate")
+        job_history = json.dumps(job_history_list)
+        resume_summary = parsed_profile.get("resume_summary", "")
+        status = "Active"
+
+        # 4. Save to SQL Database (Insert or Update if email exists)
+        conn = sqlite3.connect(settings.SQLITE_DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id FROM candidates WHERE email = ?", (email,))
+        existing = cursor.fetchone()
+        if existing:
+            candidate_id = existing[0]
+            cursor.execute("""
+                UPDATE candidates
+                SET name=?, phone=?, skills=?, experience_years=?, expected_salary=?, availability_date=?, job_history=?, resume_summary=?, stability_score=?, status=?
+                WHERE id=?
+            """, (name, phone, skills, experience_years, expected_salary, availability_date, job_history, resume_summary, stability_score, status, candidate_id))
+        else:
+            cursor.execute("""
+                INSERT INTO candidates (id, name, email, phone, skills, experience_years, expected_salary, availability_date, job_history, resume_summary, stability_score, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (candidate_id, name, email, phone, skills, experience_years, expected_salary, availability_date, job_history, resume_summary, stability_score, status))
+        
+        conn.commit()
+        conn.close()
+        
         return {
             "status": "success",
             "filename": file.filename,
-            "parsed_profile": parsed_profile
+            "candidate_id": candidate_id,
+            "parsed_profile": {
+                **parsed_profile,
+                "stability_score": stability_score,
+                "id": candidate_id
+            }
         }
         
     except Exception as e:
