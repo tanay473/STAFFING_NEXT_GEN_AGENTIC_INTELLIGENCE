@@ -137,7 +137,7 @@ export default function PipelineStatus({ apiHost, wsHost }) {
                   </div>
 
                   {/* Explanation Evidence Chain */}
-                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+                  <div style={{ background: 'var(--surface-2)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--outline-variant)' }}>
                     <h5 style={{ color: 'var(--brand-info)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Match Justification</h5>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem', whiteSpace: 'pre-line' }}>
                       {cand.evidence_chain.assessment}
@@ -227,7 +227,7 @@ export default function PipelineStatus({ apiHost, wsHost }) {
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
               Countdown to fulfill recruitment submission criteria.
             </p>
-            <div style={{ fontSize: '2.5rem', fontWeight: 700, margin: '1rem 0', color: pipelineData.sla_hours_remaining < 24 ? '#EF4444' : '#10B981', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 700, margin: '1rem 0', color: pipelineData.sla_hours_remaining < 24 ? 'var(--brand-danger)' : 'var(--brand-success)', fontFamily: 'var(--font-title)' }}>
               {pipelineData.sla_hours_remaining} hrs
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>

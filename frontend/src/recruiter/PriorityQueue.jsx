@@ -334,7 +334,7 @@ export default function PriorityQueue({ apiHost }) {
               </div>
               
               <div>
-                <h3 style={{ color: '#FFF', fontSize: '1.2rem', marginBottom: '0.5rem' }}>
+              <h3 style={{ color: 'var(--text-main)', fontSize: '1.2rem', marginBottom: '0.5rem' }}>
                   AI Planner Orchestrating Agents...
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--brand-info)', fontWeight: 600 }}>
@@ -351,7 +351,7 @@ export default function PriorityQueue({ apiHost }) {
               {/* Skeleton Cards preview */}
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem', opacity: 0.2 }}>
                 {[1, 2].map(i => (
-                  <div key={i} style={{ height: '70px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid var(--border-glass)' }} />
+                  <div key={i} style={{ height: '70px', background: 'var(--surface-3)', borderRadius: '8px', border: '1px solid var(--outline-variant)' }} />
                 ))}
               </div>
             </div>
@@ -382,7 +382,7 @@ export default function PriorityQueue({ apiHost }) {
                   </div>
 
                   {/* Evidence Chain Panel */}
-                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+                  <div style={{ background: 'var(--surface-2)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--outline-variant)' }}>
                     <h5 style={{ color: 'var(--brand-info)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Evidence Chain</h5>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', marginTop: '0.25rem', whiteSpace: 'pre-line' }}>
                       {card.evidence_chain.assessment}
@@ -397,13 +397,13 @@ export default function PriorityQueue({ apiHost }) {
                   {/* Reasons & Risks */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
                     <div>
-                      <h5 style={{ fontSize: '0.85rem', color: '#10B981' }}>Top Fit Factors</h5>
+                      <h5 style={{ fontSize: '0.85rem', color: 'var(--brand-success)' }}>Top Fit Factors</h5>
                       <ul className="reasons-list">
                         {card.reasons.map((r, i) => <li key={i}>{r}</li>)}
                       </ul>
                     </div>
                     <div>
-                      <h5 style={{ fontSize: '0.85rem', color: '#EF4444' }}>Potential Risks</h5>
+                      <h5 style={{ fontSize: '0.85rem', color: 'var(--brand-danger)' }}>Potential Risks</h5>
                       <ul className="risks-list">
                         {card.risks.length === 0 ? <li style={{ color: 'var(--text-muted)' }}>None identified</li> : card.risks.map((rk, i) => <li key={i}>{rk}</li>)}
                       </ul>
@@ -433,7 +433,7 @@ export default function PriorityQueue({ apiHost }) {
                         </div>
                       </div>
                     ) : (
-                      <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-glass)', marginTop: '0.4rem', position: 'relative' }}>
+                      <div style={{ background: 'var(--surface-2)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--outline-variant)', marginTop: '0.4rem', position: 'relative' }}>
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingRight: '2rem' }}>
                           "{card.outreach_draft}"
                         </p>
@@ -471,7 +471,7 @@ export default function PriorityQueue({ apiHost }) {
                   {/* Rejection Reasons Sub-form */}
                   {rejectId === card.id && (
                     <div className="glass-panel" style={{ padding: '1rem', marginTop: '1rem', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
-                      <h4 style={{ color: '#EF4444', fontSize: '0.95rem' }}>Candidate Rejection Panel (AI-Powered)</h4>
+                      <h4 style={{ color: 'var(--brand-danger)', fontSize: '0.95rem' }}>Candidate Rejection Panel (AI-Powered)</h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
                         <div>
                           <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Rejection Category:</label>
@@ -549,7 +549,7 @@ export default function PriorityQueue({ apiHost }) {
           {/* AI Agent Pipeline Stepper */}
           {(loading || queueData.action_cards.length > 0) && (
             <div className="glass-panel" style={{ marginTop: '1.5rem', padding: '1.25rem' }}>
-              <h4 style={{ color: '#FFF', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <h4 style={{ color: 'var(--text-main)', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Sparkles size={14} color="var(--brand-info)" /> Pipeline Agent Orchestration
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative' }}>
@@ -588,16 +588,16 @@ export default function PriorityQueue({ apiHost }) {
                         justifyContent: 'center',
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        background: status === 'completed' ? 'var(--brand-success)' : (status === 'active' ? 'var(--brand-primary)' : '#1F2937'),
-                        color: status === 'completed' ? 'var(--text-inverse)' : '#FFF',
-                        border: status === 'active' ? '2px solid rgba(99, 102, 241, 0.4)' : '1px solid var(--border-glass)',
-                        boxShadow: status === 'active' ? '0 0 10px rgba(99, 102, 241, 0.4)' : 'none',
+                        background: status === 'completed' ? 'var(--brand-success)' : (status === 'active' ? 'var(--brand-primary)' : 'var(--surface-3)'),
+                        color: status === 'completed' ? 'var(--text-inverse)' : 'var(--text-main)',
+                        border: status === 'active' ? '2px solid rgba(26, 115, 232, 0.4)' : '1px solid var(--outline-variant)',
+                        boxShadow: status === 'active' ? '0 0 8px rgba(26, 115, 232, 0.3)' : 'none',
                         transition: 'all 0.3s ease'
                       }}>
                         {status === 'completed' ? '✓' : step.id}
                       </div>
                       <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: status === 'pending' ? 'var(--text-muted)' : '#FFF' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 500, color: status === 'pending' ? 'var(--text-muted)' : 'var(--text-main)' }}>
                           {step.label}
                           {status === 'active' && <span className="status-pill review" style={{ marginLeft: '0.5rem', padding: '0.1rem 0.4rem', fontSize: '0.65rem' }}>Active</span>}
                         </div>

@@ -80,7 +80,7 @@ export default function ClientDashboard() {
         <div className="welcome-stats">
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(6, 182, 212, 0.15)' }}>
-              <Activity size={20} color="#06B6D4" />
+              <Activity size={20} color="#FFF" />
             </div>
             <div className="stat-info">
               <span className="stat-number">{stats.activePipelines}</span>
@@ -89,7 +89,7 @@ export default function ClientDashboard() {
           </div>
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(139, 92, 246, 0.15)' }}>
-              <Users size={20} color="#8B5CF6" />
+              <Users size={20} color="#FFF" />
             </div>
             <div className="stat-info">
               <span className="stat-number">{stats.candidatesReviewing}</span>
@@ -98,7 +98,7 @@ export default function ClientDashboard() {
           </div>
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.15)' }}>
-              <CheckCircle size={20} color="#10B981" />
+              <CheckCircle size={20} color="#FFF" />
             </div>
             <div className="stat-info">
               <span className="stat-number">{stats.interviewsScheduled}</span>
@@ -107,7 +107,7 @@ export default function ClientDashboard() {
           </div>
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(245, 158, 11, 0.15)' }}>
-              <Clock size={20} color="#F59E0B" />
+              <Clock size={20} color="#FFF" />
             </div>
             <div className="stat-info">
               <span className="stat-number">{stats.slaHoursLeft}h</span>

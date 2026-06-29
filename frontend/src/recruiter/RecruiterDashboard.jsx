@@ -78,7 +78,7 @@ export default function RecruiterDashboard() {
         <div className="welcome-stats">
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(99, 102, 241, 0.15)' }}>
-              <Zap size={20} color="#6366F1" />
+              <Zap size={20} color="#FFF" />
             </div>
             <div className="stat-info">
               <span className="stat-number">{stats.activeJobs}</span>
@@ -87,7 +87,7 @@ export default function RecruiterDashboard() {
           </div>
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(245, 158, 11, 0.15)' }}>
-              <Clock size={20} color="#F59E0B" />
+              <Clock size={20} color="#FFF" />
             </div>
             <div className="stat-info">
               <span className="stat-number">{stats.pendingActions}</span>
@@ -96,7 +96,7 @@ export default function RecruiterDashboard() {
           </div>
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.15)' }}>
-              <CheckCircle size={20} color="#10B981" />
+              <CheckCircle size={20} color="#FFF" />
             </div>
             <div className="stat-info">
               <span className="stat-number">{stats.submittedToday}</span>
@@ -105,7 +105,7 @@ export default function RecruiterDashboard() {
           </div>
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(239, 68, 68, 0.15)' }}>
-              <AlertTriangle size={20} color="#EF4444" />
+              <AlertTriangle size={20} color="#FFF" />
             </div>
             <div className="stat-info">
               <span className="stat-number">{stats.ghostAlerts}</span>

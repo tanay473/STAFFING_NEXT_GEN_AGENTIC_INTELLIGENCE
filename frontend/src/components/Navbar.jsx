@@ -43,7 +43,7 @@ export default function Navbar() {
   return (
     <header className="navbar">
       <div className="nav-logo">
-        <Briefcase size={22} color="#6366F1" />
+        <Briefcase size={22} color="#1A73E8" />
         <span>Staffing.<span>NBA</span></span>
       </div>
 
