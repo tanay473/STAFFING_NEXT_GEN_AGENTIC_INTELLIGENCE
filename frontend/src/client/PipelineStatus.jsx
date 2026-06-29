@@ -39,8 +39,10 @@ export default function PipelineStatus({ apiHost, wsHost }) {
               candidate_id: msg.candidate_id,
               name: msg.candidate_name,
               match_score: msg.match_score,
-              reasons: msg.reasons,
-              risks: msg.risks,
+              role_name: msg.role_name || "Open Role",
+              job_id: msg.job_id,
+              reasons: msg.reasons || [],
+              risks: msg.risks || [],
               status: "Under Review",
               evidence_chain: msg.evidence_chain
             }]
@@ -106,7 +108,19 @@ export default function PipelineStatus({ apiHost, wsHost }) {
             </p>
           </div>
 
-          <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)' }}>Submitted Candidates Under Review</h3>
+          <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)' }}>
+            Approved Candidates
+            {pipelineData.job_order?.role_name && (
+              <span style={{
+                marginLeft: '0.6rem', fontSize: '0.78rem', fontWeight: 600,
+                padding: '0.2rem 0.65rem', borderRadius: 'var(--radius-full)',
+                background: 'rgba(26,115,232,0.08)', color: 'var(--brand-primary)',
+                border: '1px solid rgba(26,115,232,0.2)', verticalAlign: 'middle'
+              }}>
+                🎯 {pipelineData.job_order.role_name}
+              </span>
+            )}
+          </h3>
           
           {pipelineData.pipeline.length === 0 ? (
             <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -117,32 +131,63 @@ export default function PipelineStatus({ apiHost, wsHost }) {
               {pipelineData.pipeline.map((cand) => (
                 <div key={cand.candidate_id} className="glass-panel action-card" style={{ borderLeft: `4px solid ${cand.status === 'Interview Scheduled' ? 'var(--brand-success)' : (cand.status === 'Rejected' ? 'var(--brand-danger)' : 'var(--brand-info)')}` }}>
                   <div className="card-header">
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <h3 className="candidate-name" style={{ color: 'var(--text-main)' }}>{cand.name}</h3>
-                      <span className={`status-pill ${cand.status === 'Interview Scheduled' ? 'submitted' : (cand.status === 'Rejected' ? 'review' : 'review')}`} style={{ marginTop: '0.25rem', display: 'inline-block' }}>
-                        {cand.status}
-                      </span>
+                      {/* Role badge — shows which role this candidate was approved for */}
+                      {cand.role_name && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
+                          <span style={{
+                            padding: '0.2rem 0.65rem', borderRadius: 'var(--radius-full)',
+                            fontSize: '0.72rem', fontWeight: 600,
+                            background: 'rgba(26,115,232,0.08)', color: 'var(--brand-primary)',
+                            border: '1px solid rgba(26,115,232,0.2)',
+                            display: 'inline-flex', alignItems: 'center', gap: '0.25rem'
+                          }}>
+                            🎯 {cand.role_name}
+                          </span>
+                          <span className={`status-pill ${cand.status === 'Interview Scheduled' ? 'submitted' : 'review'}`} style={{ display: 'inline-block' }}>
+                            {cand.status}
+                          </span>
+                        </div>
+                      )}
+                      {!cand.role_name && (
+                        <span className={`status-pill ${cand.status === 'Interview Scheduled' ? 'submitted' : 'review'}`} style={{ marginTop: '0.25rem', display: 'inline-block' }}>
+                          {cand.status}
+                        </span>
+                      )}
                     </div>
                     <div className="match-circle" style={{ background: cand.status === 'Interview Scheduled' ? 'linear-gradient(135deg, var(--brand-success), #059669)' : 'linear-gradient(135deg, var(--brand-info), var(--brand-primary))' }}>
                       {cand.match_score}%
                     </div>
                   </div>
 
-                  {/* Reasons & Risks */}
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <h5 style={{ color: '#10B981', fontSize: '0.85rem' }}>Strengths Alignment</h5>
-                    <ul style={{ fontSize: '0.85rem', color: 'var(--text-main)', paddingLeft: '1.25rem', marginTop: '0.2rem' }}>
-                      {cand.reasons.map((r, i) => <li key={i}>{r}</li>)}
-                    </ul>
+                  {/* Strengths + Risks */}
+                  <div style={{ marginTop: '0.5rem', display: 'grid', gridTemplateColumns: cand.risks?.length > 0 ? '1fr 1fr' : '1fr', gap: '0.75rem' }}>
+                    <div>
+                      <h5 style={{ color: '#10B981', fontSize: '0.82rem', marginBottom: '0.2rem' }}>Strengths Alignment</h5>
+                      <ul style={{ fontSize: '0.82rem', color: 'var(--text-main)', paddingLeft: '1.1rem', margin: 0, lineHeight: 1.55 }}>
+                        {(cand.reasons || []).map((r, i) => <li key={i}>{r}</li>)}
+                      </ul>
+                    </div>
+                    {cand.risks?.length > 0 && (
+                      <div>
+                        <h5 style={{ color: 'var(--brand-warning)', fontSize: '0.82rem', marginBottom: '0.2rem' }}>Risk Flags</h5>
+                        <ul style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', paddingLeft: '1.1rem', margin: 0, lineHeight: 1.55 }}>
+                          {cand.risks.map((r, i) => <li key={i}>{r}</li>)}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   {/* Explanation Evidence Chain */}
-                  <div style={{ background: 'var(--surface-2)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--outline-variant)' }}>
-                    <h5 style={{ color: 'var(--brand-info)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Match Justification</h5>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem', whiteSpace: 'pre-line' }}>
-                      {cand.evidence_chain.assessment}
-                    </p>
-                  </div>
+                  {cand.evidence_chain?.assessment && (
+                    <div style={{ background: 'var(--surface-2)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--outline-variant)' }}>
+                      <h5 style={{ color: 'var(--brand-info)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Match Justification</h5>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem', whiteSpace: 'pre-line' }}>
+                        {cand.evidence_chain.assessment}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Actions / Decision status representation */}
                   {cand.status === "Under Review" ? (

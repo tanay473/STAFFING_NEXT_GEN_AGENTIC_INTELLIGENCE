@@ -144,13 +144,16 @@ async def process_recruiter_action(req: ActionRequest, background_tasks: Backgro
 
     # 2. Push real-time update to client portal via WebSocket if approved
     if req.decision in ('Approved', 'Edited'):
+        active_job = session_memory.get("active_job_order") or {}
         client_update = {
             "event": "candidate_submitted",
             "job_id": matching_card.job_id,
             "candidate_id": matching_card.candidate_id,
             "candidate_name": matching_card.candidate_name,
             "match_score": matching_card.match_score,
+            "role_name": active_job.get("role_name", "Open Role"),
             "reasons": matching_card.reasons,
+            "risks": matching_card.risks,
             "status": "Submitted",
             "evidence_chain": matching_card.evidence_chain
         }
@@ -180,17 +183,24 @@ async def trigger_new_jd_planner(req: IngestJobRequest):
         # Run graph execution
         final_state = planner_app.invoke(initial_state)
         
+        # Log any non-fatal agent warnings but do NOT fail — agents have built-in fallbacks
         if final_state.get("errors"):
-            logger.error(f"Planner finished with errors: {final_state['errors']}")
-            raise HTTPException(status_code=500, detail=f"Pipeline run encountered errors: {final_state['errors']}")
+            logger.warning(f"Planner finished with non-fatal warnings: {final_state['errors']}")
 
-        # Retrieve action cards matching schemas
+        # Only hard-fail if the pipeline produced zero candidates AND has critical errors
         action_cards = final_state.get("evaluated_matches", [])
+        if not action_cards and final_state.get("errors"):
+            raise HTTPException(
+                status_code=500,
+                detail=f"Pipeline failed to produce any candidates. Errors: {final_state['errors']}"
+            )
+
         cards_dict = [c.dict() for c in action_cards]
         
         # Save recommendations to short-term queue
         session_memory.set("current_shortlist", cards_dict)
-        session_memory.set("active_job_order", final_state["job_order"].dict())
+        if final_state.get("job_order"):
+            session_memory.set("active_job_order", final_state["job_order"].dict())
         
         # Broadcast real-time event to sync client portal / dependent components
         await ws_manager.broadcast({
@@ -201,11 +211,14 @@ async def trigger_new_jd_planner(req: IngestJobRequest):
         return {
             "status": "success",
             "job_id": final_state["job_id"],
-            "job_order": final_state["job_order"].dict(),
+            "job_order": final_state["job_order"].dict() if final_state.get("job_order") else {},
             "recommendations": cards_dict,
-            "logs": final_state["logs"]
+            "logs": final_state["logs"],
+            "warnings": final_state.get("errors", [])  # surface warnings to UI without failing
         }
         
+    except HTTPException:
+        raise  # re-raise intentional HTTP errors as-is
     except Exception as e:
         logger.error(f"Failed to run planner graph: {e}")
         raise HTTPException(status_code=500, detail=str(e))

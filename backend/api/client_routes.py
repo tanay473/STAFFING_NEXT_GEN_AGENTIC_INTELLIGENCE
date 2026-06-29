@@ -44,6 +44,8 @@ async def get_client_pipeline_status():
                 "candidate_id": card_obj.candidate_id,
                 "name": card_obj.candidate_name,
                 "match_score": card_obj.match_score,
+                "role_name": job_order.get("role_name", "Open Role") if job_order else "Open Role",
+                "job_id": card_obj.job_id,
                 "reasons": card_obj.reasons,
                 "risks": card_obj.risks,
                 "status": client_status,
