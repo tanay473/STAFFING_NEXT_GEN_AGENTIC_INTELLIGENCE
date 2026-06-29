@@ -3,12 +3,13 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Sparkles, AlertTriangle, Bell, TrendingUp, Users, Clock,
-  Zap, Activity, CheckCircle, XCircle, BarChart3
+  Zap, Activity, CheckCircle, XCircle, BarChart3, Briefcase
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PriorityQueue from './PriorityQueue.jsx';
 import GhostingAlerts from './GhostingAlerts.jsx';
 import DraftOutreach from './DraftOutreach.jsx';
+import JobOrdersView from './JobOrdersView.jsx';
 
 const API_HOST = "http://localhost:8000";
 
@@ -120,6 +121,9 @@ export default function RecruiterDashboard() {
         <button className={`dash-tab ${activeTab === 'queue' ? 'active' : ''}`} onClick={() => navigate('/recruiter/queue')}>
           <BarChart3 size={16} /> Priority Queue
         </button>
+        <button className={`dash-tab ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => navigate('/recruiter/orders')}>
+          <Briefcase size={16} /> Job Orders
+        </button>
         <button className={`dash-tab ${activeTab === 'alerts' ? 'active' : ''}`} onClick={() => navigate('/recruiter/alerts')}>
           <Bell size={16} /> Ghosting Alerts
         </button>
@@ -136,6 +140,7 @@ export default function RecruiterDashboard() {
         transition={{ duration: 0.3 }}
       >
         {activeTab === 'queue' && <PriorityQueue apiHost={API_HOST} />}
+        {activeTab === 'orders' && <JobOrdersView apiHost={API_HOST} />}
         {activeTab === 'alerts' && <GhostingAlerts apiHost={API_HOST} />}
         {activeTab === 'outreach' && <DraftOutreach apiHost={API_HOST} />}
       </motion.div>

@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import google.generativeai as genai
-from backend.config.settings import GEMINI_API_KEY, GEMINI_MODEL
+from backend.config.settings import GEMINI_API_KEY
 from backend.models.action_card import ActionCard
 from backend.agents.planner import planner_app
 from backend.agents.engagement_monitor import check_engagement_alerts
@@ -40,6 +40,74 @@ async def get_recruiter_queue():
         "action_cards": cards,
         "alerts": alerts
     }
+
+class JobOrderRegistryEntry(BaseModel):
+    id: str
+    role_name: str
+    client_name: str
+    jd_text: str
+    required_skills: List[str] = []
+    nice_to_have_skills: List[str] = []
+    budget_max: float = 0.0
+    location: str = "Remote"
+    duration_type: str = "Full-time"
+    timeline: str = ""
+    sla_hours: int = 72
+    target_submissions: int = 3
+    deadline: str = ""
+    candidates_submitted: int = 0
+    source: str = "manual"  # "manual" | "pipeline"
+
+@router.get("/job-orders", response_model=Dict[str, Any])
+async def get_job_orders():
+    """Returns all SLA-tracked job orders visible to the recruiter — from pipeline runs and manual SLA configs."""
+    registry: List[Dict] = session_memory.get("job_order_registry") or []
+    
+    # Always inject the currently active pipeline job order if present
+    active = session_memory.get("active_job_order")
+    if active:
+        active_id = active.get("id", "")
+        exists = any(r.get("id") == active_id for r in registry)
+        if not exists and active_id:
+            registry = [{
+                "id": active_id,
+                "role_name": active.get("role_name", ""),
+                "client_name": active.get("client_name", ""),
+                "jd_text": active.get("raw_jd", ""),
+                "required_skills": active.get("required_skills", []),
+                "nice_to_have_skills": active.get("nice_to_have_skills", []),
+                "budget_max": active.get("budget_max", 0.0),
+                "location": active.get("location", "Remote"),
+                "duration_type": active.get("duration_type", "Full-time"),
+                "timeline": active.get("timeline", ""),
+                "sla_hours": 72,
+                "target_submissions": active.get("target_submissions", 3),
+                "deadline": active.get("sla_deadline", ""),
+                "candidates_submitted": len(session_memory.get("current_shortlist") or []),
+                "source": "pipeline"
+            }, *registry]
+    
+    return {"job_orders": registry}
+
+@router.post("/job-orders")
+async def register_job_order(entry: JobOrderRegistryEntry):
+    """Persists a manually configured SLA job order into the recruiter-visible registry."""
+    registry: List[Dict] = session_memory.get("job_order_registry") or []
+    
+    # Replace if same ID already exists, else prepend
+    registry = [r for r in registry if r.get("id") != entry.id]
+    registry.insert(0, entry.dict())
+    session_memory.set("job_order_registry", registry)
+    
+    return {"status": "success", "id": entry.id}
+
+@router.delete("/job-orders/{order_id}")
+async def delete_job_order(order_id: str):
+    """Removes a job order from the registry."""
+    registry: List[Dict] = session_memory.get("job_order_registry") or []
+    updated = [r for r in registry if r.get("id") != order_id]
+    session_memory.set("job_order_registry", updated)
+    return {"status": "success", "deleted_id": order_id}
 
 @router.post("/action")
 async def process_recruiter_action(req: ActionRequest, background_tasks: BackgroundTasks):
@@ -176,7 +244,7 @@ async def draft_rejection(req: RejectionDraftRequest):
     
     if GEMINI_API_KEY:
         try:
-            model = genai.GenerativeModel(GEMINI_MODEL)
+            model = genai.GenerativeModel("gemini-2.5-flash-lite")
             response = model.generate_content(prompt)
             draft = response.text.strip()
         except Exception as e:

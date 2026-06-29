@@ -97,6 +97,29 @@ export default function SLATracker({ apiHost }) {
     setCustomSlas(updated);
     localStorage.setItem('custom_slas', JSON.stringify(updated));
 
+    // Sync new role to recruiter job-order registry
+    fetch(`${apiHost}/recruiter/job-orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: newSla.id,
+        role_name: newSla.jobTitle,
+        client_name: newSla.client,
+        jd_text: '',
+        required_skills: [],
+        nice_to_have_skills: [],
+        budget_max: 0,
+        location: 'Remote',
+        duration_type: 'Full-time',
+        timeline: '',
+        sla_hours: newSla.totalHours,
+        target_submissions: newSla.target,
+        deadline: newSla.deadline,
+        candidates_submitted: 0,
+        source: 'manual'
+      })
+    }).catch(e => console.warn('Could not sync SLA to recruiter registry:', e));
+
     // Clear form and hide it
     setNewRole('');
     setNewClient('');
