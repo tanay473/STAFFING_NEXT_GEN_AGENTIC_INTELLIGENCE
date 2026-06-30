@@ -78,13 +78,13 @@ export default function PriorityQueue({ apiHost }) {
       });
       const data = await res.json();
       if (data.status === "success") {
-        setQueueData(prev => ({ ...prev, action_cards: data.recommendations }));
+        setQueueData(prev => ({ ...prev, action_cards: data.recommendations, status: 'active' }));
       } else {
         alert("Failed running graph planner.");
       }
     } catch (e) {
       console.error(e);
-      alert("Error calling planner API.");
+      alert(`Error calling planner API: ${e.message}`);
     } finally {
       clearInterval(stepTimer);
       setLoading(false);
@@ -357,7 +357,9 @@ export default function PriorityQueue({ apiHost }) {
             </div>
           ) : queueData.action_cards.length === 0 ? (
             <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No recommendations in active session. Paste a Job Description to start.
+              {queueData.status === 'active' 
+                ? "No candidates found with matching core skills for this job order. Halting retrieval to preserve submission quality." 
+                : "No recommendations in active session. Paste a Job Description to start."}
             </div>
           ) : (
             <div className="cards-container">

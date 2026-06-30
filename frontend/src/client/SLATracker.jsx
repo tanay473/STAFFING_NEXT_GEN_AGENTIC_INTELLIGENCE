@@ -19,6 +19,12 @@ export default function SLATracker({ apiHost }) {
   const [newClient, setNewClient] = useState('');
   const [newDuration, setNewDuration] = useState('72');
   const [newTarget, setNewTarget] = useState('3');
+  const [newJdText, setNewJdText] = useState('');
+  const [newLocation, setNewLocation] = useState('Remote');
+  const [newBudget, setNewBudget] = useState('120000');
+  const [newSkills, setNewSkills] = useState([]);
+  const [newNiceSkills, setNewNiceSkills] = useState([]);
+  const [uploadingJd, setUploadingJd] = useState(false);
 
   // Load custom client SLAs from local storage
   const [customSlas, setCustomSlas] = useState(() => {
@@ -79,6 +85,51 @@ export default function SLATracker({ apiHost }) {
     return Math.max(0, Math.min(100, ((total - diff) / total) * 100));
   };
 
+  const handleJdUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setUploadingJd(true);
+    try {
+      const res = await fetch(`${apiHost}/ingest/parse-jd-file`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.status === "success" && data.details) {
+        setNewJdText(data.jd_text || "");
+        if (data.details.role_name && data.details.role_name !== "Software Engineer") {
+          setNewRole(data.details.role_name);
+        }
+        if (data.details.client_name && data.details.client_name !== "Unknown Client") {
+          setNewClient(data.details.client_name);
+        }
+        if (data.details.budget_max) {
+          setNewBudget(String(data.details.budget_max));
+        }
+        if (data.details.location) {
+          setNewLocation(data.details.location);
+        }
+        if (data.details.required_skills) {
+          setNewSkills(data.details.required_skills);
+        }
+        if (data.details.nice_to_have_skills) {
+          setNewNiceSkills(data.details.nice_to_have_skills);
+        }
+      } else {
+        alert("Failed parsing uploaded JD PDF.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error uploading JD PDF.");
+    } finally {
+      setUploadingJd(false);
+    }
+  };
+
   const handleAddSLA = (e) => {
     e.preventDefault();
     if (!newRole || !newClient) return;
@@ -90,7 +141,12 @@ export default function SLATracker({ apiHost }) {
       deadline: new Date(Date.now() + parseInt(newDuration) * 60 * 60 * 1000).toISOString(),
       totalHours: parseInt(newDuration),
       candidatesSubmitted: 0,
-      target: parseInt(newTarget)
+      target: parseInt(newTarget),
+      jd_text: newJdText,
+      budget_max: parseFloat(newBudget) || 0,
+      location: newLocation,
+      required_skills: newSkills,
+      nice_to_have_skills: newNiceSkills
     };
 
     const updated = [newSla, ...customSlas];
@@ -105,13 +161,13 @@ export default function SLATracker({ apiHost }) {
         id: newSla.id,
         role_name: newSla.jobTitle,
         client_name: newSla.client,
-        jd_text: '',
-        required_skills: [],
-        nice_to_have_skills: [],
-        budget_max: 0,
-        location: 'Remote',
+        jd_text: newSla.jd_text || '',
+        required_skills: newSla.required_skills || [],
+        nice_to_have_skills: newSla.nice_to_have_skills || [],
+        budget_max: newSla.budget_max,
+        location: newSla.location,
         duration_type: 'Full-time',
-        timeline: '',
+        timeline: '3 weeks',
         sla_hours: newSla.totalHours,
         target_submissions: newSla.target,
         deadline: newSla.deadline,
@@ -125,8 +181,14 @@ export default function SLATracker({ apiHost }) {
     setNewClient('');
     setNewDuration('72');
     setNewTarget('3');
+    setNewJdText('');
+    setNewLocation('Remote');
+    setNewBudget('120000');
+    setNewSkills([]);
+    setNewNiceSkills([]);
     setShowAddForm(false);
   };
+
 
   const handleDeleteSLA = (id) => {
     const updated = customSlas.filter(item => item.id !== id);
@@ -154,86 +216,197 @@ export default function SLATracker({ apiHost }) {
 
       {/* Add New SLA Configuration Form */}
       {showAddForm && (
-        <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.5rem', border: '1px solid var(--brand-primary-light)', animation: 'fadeIn 0.25s ease-out' }}>
-          <h4 style={{ color: 'var(--text-main)', fontSize: '1rem', fontWeight: 500, marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', border: '1px solid var(--brand-primary-light)', animation: 'fadeIn 0.25s ease-out' }}>
+          <h4 style={{ color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 500, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Clock size={18} color="var(--brand-primary)" /> Configure New Role SLA Tracker
           </h4>
-          <form onSubmit={handleAddSLA} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr)) auto', gap: '1rem', alignItems: 'end' }}>
-            <div className="login-field" style={{ gap: '0.3rem', display: 'flex', flexDirection: 'column' }}>
-              <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Role Name</label>
+          
+          <form onSubmit={handleAddSLA} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* PDF File Upload Zone */}
+            <div style={{
+              border: '2px dashed var(--outline)',
+              borderRadius: 'var(--radius-xs)',
+              padding: '1rem',
+              textAlign: 'center',
+              background: 'var(--surface-2)',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'border-color 0.2s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+            onDragOver={(e) => e.preventDefault()}
+            >
               <input
-                type="text"
-                placeholder="e.g. Senior Frontend Engineer"
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value)}
+                type="file"
+                accept=".pdf"
+                onChange={handleJdUpload}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  opacity: 0,
+                  cursor: 'pointer'
+                }}
+              />
+              <span style={{ fontSize: '1.5rem' }}>📄</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 500 }}>
+                {uploadingJd ? 'Processing with Gemini...' : 'Click or Drag PDF here to auto-extract details'}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Supports Job Description PDFs · Will auto-fill the form fields below
+              </span>
+            </div>
+
+            {/* Grid of basic fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Role Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Senior Frontend Engineer"
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                  required
+                  style={{
+                    width: '100%', padding: '0.55rem 0.75rem', background: 'var(--surface-1)',
+                    border: '1px solid var(--outline)', borderRadius: 'var(--radius-xs)',
+                    color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Company / Client</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Acme Corp"
+                  value={newClient}
+                  onChange={(e) => setNewClient(e.target.value)}
+                  required
+                  style={{
+                    width: '100%', padding: '0.55rem 0.75rem', background: 'var(--surface-1)',
+                    border: '1px solid var(--outline)', borderRadius: 'var(--radius-xs)',
+                    color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>SLA (Hours)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="720"
+                  placeholder="72"
+                  value={newDuration}
+                  onChange={(e) => setNewDuration(e.target.value)}
+                  required
+                  style={{
+                    width: '100%', padding: '0.55rem 0.75rem', background: 'var(--surface-1)',
+                    border: '1px solid var(--outline)', borderRadius: 'var(--radius-xs)',
+                    color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Target Submissions</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  placeholder="3"
+                  value={newTarget}
+                  onChange={(e) => setNewTarget(e.target.value)}
+                  required
+                  style={{
+                    width: '100%', padding: '0.55rem 0.75rem', background: 'var(--surface-1)',
+                    border: '1px solid var(--outline)', borderRadius: 'var(--radius-xs)',
+                    color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Work Location</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Remote, Onsite, Hybrid NYC"
+                  value={newLocation}
+                  onChange={(e) => setNewLocation(e.target.value)}
+                  required
+                  style={{
+                    width: '100%', padding: '0.55rem 0.75rem', background: 'var(--surface-1)',
+                    border: '1px solid var(--outline)', borderRadius: 'var(--radius-xs)',
+                    color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Max Salary Budget ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 130000"
+                  value={newBudget}
+                  onChange={(e) => setNewBudget(e.target.value)}
+                  required
+                  style={{
+                    width: '100%', padding: '0.55rem 0.75rem', background: 'var(--surface-1)',
+                    border: '1px solid var(--outline)', borderRadius: 'var(--radius-xs)',
+                    color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Job Description Textarea */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Job Description (Raw Text)</label>
+              <textarea
+                placeholder="Paste the raw requirements, job post details or email chain here..."
+                value={newJdText}
+                onChange={(e) => setNewJdText(e.target.value)}
                 required
                 style={{
-                  width: '100%', padding: '0.55rem 0.75rem', background: 'var(--surface-1)',
-                  border: '1px solid var(--outline)', borderRadius: 'var(--radius-xs)',
-                  color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none'
+                  width: '100%',
+                  height: '110px',
+                  padding: '0.65rem 0.75rem',
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--outline)',
+                  borderRadius: 'var(--radius-xs)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.85rem',
+                  outline: 'none',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  lineHeight: '1.45'
                 }}
               />
             </div>
-            <div className="login-field" style={{ gap: '0.3rem', display: 'flex', flexDirection: 'column' }}>
-              <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Company / Client</label>
-              <input
-                type="text"
-                placeholder="e.g. Acme Corp"
-                value={newClient}
-                onChange={(e) => setNewClient(e.target.value)}
-                required
-                style={{
-                  width: '100%', padding: '0.55rem 0.75rem', background: 'var(--surface-1)',
-                  border: '1px solid var(--outline)', borderRadius: 'var(--radius-xs)',
-                  color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none'
-                }}
-              />
-            </div>
-            <div className="login-field" style={{ gap: '0.3rem', display: 'flex', flexDirection: 'column' }}>
-              <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>SLA (Hours)</label>
-              <input
-                type="number"
-                min="1"
-                max="720"
-                placeholder="72"
-                value={newDuration}
-                onChange={(e) => setNewDuration(e.target.value)}
-                required
-                style={{
-                  width: '100%', padding: '0.55rem 0.75rem', background: 'var(--surface-1)',
-                  border: '1px solid var(--outline)', borderRadius: 'var(--radius-xs)',
-                  color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none'
-                }}
-              />
-            </div>
-            <div className="login-field" style={{ gap: '0.3rem', display: 'flex', flexDirection: 'column' }}>
-              <label style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Target Submissions</label>
-              <input
-                type="number"
-                min="1"
-                max="20"
-                placeholder="3"
-                value={newTarget}
-                onChange={(e) => setNewTarget(e.target.value)}
-                required
-                style={{
-                  width: '100%', padding: '0.55rem 0.75rem', background: 'var(--surface-1)',
-                  border: '1px solid var(--outline)', borderRadius: 'var(--radius-xs)',
-                  color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none'
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', flex: 'none' }}>
-              <button type="submit" className="btn btn-approve" style={{ height: '37px', padding: '0 1.25rem', borderRadius: 'var(--radius-xs)', fontWeight: 500, fontSize: '0.85rem', width: 'auto', flex: 'none' }}>
-                Add SLA
-              </button>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
                 className="btn btn-edit"
-                style={{ height: '37px', padding: '0 1.25rem', borderRadius: 'var(--radius-xs)', fontWeight: 500, fontSize: '0.85rem', width: 'auto', flex: 'none' }}
+                style={{ height: '37px', padding: '0 1.5rem', borderRadius: 'var(--radius-xs)', fontWeight: 500, fontSize: '0.85rem', width: 'auto' }}
               >
                 Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-approve"
+                style={{ height: '37px', padding: '0 1.5rem', borderRadius: 'var(--radius-xs)', fontWeight: 500, fontSize: '0.85rem', width: 'auto' }}
+              >
+                Create SLA
               </button>
             </div>
           </form>

@@ -57,7 +57,56 @@ def calculate_stability_score(job_history) -> float:
     score = 100.0 - (short_stays * 25.0)
     return max(0.0, score)
 
-def generate_validation_thought_process(cand, job_order, skill_score, salary_score, avail_score, stability_score) -> str:
+def get_memory_adjustments(cand, memories) -> dict:
+    adjustment = 0.0
+    risk_notes = []
+    reason_notes = []
+    thought_process_line = None
+    
+    if not memories:
+        return {
+            "score_adjustment": adjustment,
+            "risk_notes": risk_notes,
+            "reason_notes": reason_notes,
+            "thought_process_line": thought_process_line
+        }
+        
+    for mem in memories:
+        meta = mem.get("metadata", {})
+        text = mem.get("text", "")
+        cand_id = meta.get("candidate_id")
+        decision = meta.get("decision")
+        
+        # Match candidate by ID or Name (case-insensitive) in the text
+        is_candidate_match = (cand_id == cand.id) or (cand.name.lower() in text.lower())
+        
+        if is_candidate_match:
+            # Extract feedback notes from the memory text if possible
+            feedback_notes = "No feedback notes recorded."
+            if "Feedback notes:" in text:
+                parts = text.split("Feedback notes:")
+                if len(parts) > 1:
+                    feedback_notes = parts[1].split(".")[0].strip()
+            
+            if decision == "Rejected":
+                adjustment -= 25.0
+                risk_notes.append(f"Previously rejected by client. Feedback: '{feedback_notes}'")
+                thought_process_line = f"• Memory Feedback Alignment (-25.0%): Candidate was previously rejected by this client. Notes: '{feedback_notes}'."
+                break
+            elif decision in ("Approved", "Edited"):
+                adjustment += 5.0
+                reason_notes.append("Previously approved/shortlisted for this client.")
+                thought_process_line = "• Memory Feedback Alignment (+5.0%): Candidate was previously approved/shortlisted for this client."
+                break
+                
+    return {
+        "score_adjustment": adjustment,
+        "risk_notes": risk_notes,
+        "reason_notes": reason_notes,
+        "thought_process_line": thought_process_line
+    }
+
+def generate_validation_thought_process(cand, job_order, skill_score, salary_score, avail_score, stability_score, mem_adjust_line=None) -> str:
     req_skills = job_order.required_skills or []
     req_set = set(s.lower() for s in req_skills)
     cand_skills = cand.skills or []
@@ -101,6 +150,8 @@ def generate_validation_thought_process(cand, job_order, skill_score, salary_sco
         stability_points,
         avail_points
     ]
+    if mem_adjust_line:
+        points.append(mem_adjust_line)
     return "\n".join(points)
 
 def run_reasoning_agent(state: AgentState) -> AgentState:
@@ -148,7 +199,11 @@ def run_reasoning_agent(state: AgentState) -> AgentState:
                 (stability_score * SCORING_WEIGHTS["stability_score"])
             )
             
-            # 2. Qualitative analysis using Gemini
+            # 2. Retrieve memory adjustments and apply to score
+            mem_adjust = get_memory_adjustments(cand, state.get("memories", []))
+            final_score = max(0.0, min(100.0, weighted_score + mem_adjust["score_adjustment"]))
+            
+            # 3. Qualitative analysis using Gemini
             analysis_reasons = []
             analysis_risks = []
             
@@ -205,39 +260,80 @@ def run_reasoning_agent(state: AgentState) -> AgentState:
                     analysis_reasons = llm_res.get("reasons", [])
                     analysis_risks = llm_res.get("risks", [])
                     assessment = llm_res.get("assessment", "")
+                    
+                    # Inject memory notes and thought process line into LLM output to keep it grounded
+                    if mem_adjust["thought_process_line"] and mem_adjust["thought_process_line"] not in assessment:
+                        assessment += f"\n{mem_adjust['thought_process_line']}"
+                    analysis_reasons.extend(mem_adjust["reason_notes"])
+                    analysis_risks.extend(mem_adjust["risk_notes"])
+                    
                     if not assessment or not assessment.strip().startswith("•"):
                         assessment = generate_validation_thought_process(
-                            cand, job_order, skill_score, salary_score, avail_score, stability_score
+                            cand, job_order, skill_score, salary_score, avail_score, stability_score, mem_adjust["thought_process_line"]
                         )
                 except Exception as e:
                     logger.error(f"Gemini evaluation failed for {cand.name}: {e}")
+                    cand_skills_set = set(s.lower() for s in cand.skills) if cand.skills else set()
+                    job_req_skills_set = set(s.lower() for s in job_order.required_skills) if job_order.required_skills else set()
+                    matched_count = len(cand_skills_set.intersection(job_req_skills_set))
+                    if job_req_skills_set:
+                        if matched_count > 0:
+                            skills_reason = f"Matches {matched_count} core skill{'s' if matched_count != 1 else ''}"
+                        else:
+                            skills_reason = "Alternative experience profile matching role needs"
+                    else:
+                        skills_reason = "Flexible technical requirements satisfied"
+
                     analysis_reasons = [
-                        f"Matches {len(set(cand.skills).intersection(set(job_order.required_skills)))} core skills",
+                        skills_reason,
                         f"Strong experience profile with {cand.experience_years} years in the field",
                         "Availability timeline is aligned"
                     ]
+                    analysis_reasons.extend(mem_adjust["reason_notes"])
+                    
                     analysis_risks = []
+                    if job_req_skills_set and matched_count == 0:
+                        analysis_risks.append("No matching core skills found for this role.")
                     if stability_score < 70.0:
                         analysis_risks.append("Short job durations flagged in recent history.")
                     if cand.expected_salary > job_order.budget_max:
                         analysis_risks.append(f"Expected salary of {cand.expected_salary} is above client limit of {job_order.budget_max}.")
+                    analysis_risks.extend(mem_adjust["risk_notes"])
+                    
                     assessment = generate_validation_thought_process(
-                        cand, job_order, skill_score, salary_score, avail_score, stability_score
+                        cand, job_order, skill_score, salary_score, avail_score, stability_score, mem_adjust["thought_process_line"]
                     )
             else:
                 # Mock qualitative output if no key
+                cand_skills_set = set(s.lower() for s in cand.skills) if cand.skills else set()
+                job_req_skills_set = set(s.lower() for s in job_order.required_skills) if job_order.required_skills else set()
+                matched_count = len(cand_skills_set.intersection(job_req_skills_set))
+                if job_req_skills_set:
+                    if matched_count > 0:
+                        skills_reason = f"Matches {matched_count} core skill{'s' if matched_count != 1 else ''}"
+                    else:
+                        skills_reason = "Alternative experience profile matching role needs"
+                else:
+                    skills_reason = "Flexible technical requirements satisfied"
+
                 analysis_reasons = [
-                    f"Matches {len(set(cand.skills).intersection(set(job_order.required_skills)))} core skills",
+                    skills_reason,
                     f"Strong experience profile with {cand.experience_years} years in the field",
                     "Availability timeline is aligned"
                 ]
+                analysis_reasons.extend(mem_adjust["reason_notes"])
+                
                 analysis_risks = []
+                if job_req_skills_set and matched_count == 0:
+                    analysis_risks.append("No matching core skills found for this role.")
                 if stability_score < 70.0:
                     analysis_risks.append("Short job durations flagged in recent history.")
                 if cand.expected_salary > job_order.budget_max:
                     analysis_risks.append(f"Expected salary of {cand.expected_salary} is above client limit of {job_order.budget_max}.")
+                analysis_risks.extend(mem_adjust["risk_notes"])
+                
                 assessment = generate_validation_thought_process(
-                    cand, job_order, skill_score, salary_score, avail_score, stability_score
+                    cand, job_order, skill_score, salary_score, avail_score, stability_score, mem_adjust["thought_process_line"]
                 )
 
             # Construct action card metadata / fit breakdown
@@ -263,12 +359,12 @@ def run_reasoning_agent(state: AgentState) -> AgentState:
                 job_id=job_order.id,
                 candidate_id=cand.id,
                 candidate_name=cand.name,
-                match_score=round(weighted_score, 1),
+                match_score=round(final_score, 1),
                 fit_breakdown=fit_breakdown,
                 reasons=analysis_reasons[:3],
                 risks=analysis_risks,
                 outreach_draft="", # Generated by recommendation agent next
-                confidence_score=round(weighted_score * 0.95, 1),
+                confidence_score=round(final_score * 0.95, 1),
                 evidence_chain=evidence_chain
             )
             evaluated_list.append(evaluated_card)

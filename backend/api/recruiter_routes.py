@@ -21,6 +21,14 @@ if GEMINI_API_KEY:
 
 class IngestJobRequest(BaseModel):
     jd_text: str
+    job_id: Optional[str] = None
+    client_name: Optional[str] = None
+    role_name: Optional[str] = None
+    budget_max: Optional[Any] = None
+    location: Optional[str] = None
+    required_skills: Optional[Any] = None
+    nice_to_have_skills: Optional[Any] = None
+
 
 class ActionRequest(BaseModel):
     action_card_id: str
@@ -166,9 +174,45 @@ async def trigger_new_jd_planner(req: IngestJobRequest):
     """Triggers the LangGraph pipeline for a new Job Description text."""
     logger.info("New JD request received. Invoking LangGraph state machine...")
     
+    # Preprocess and coerce types to prevent schema validation failures downstream
+    budget_val = req.budget_max
+    if budget_val is not None:
+        if isinstance(budget_val, str):
+            budget_val = budget_val.strip()
+            if budget_val == "":
+                budget_val = None
+            else:
+                try:
+                    clean_budget = "".join(c for c in budget_val if c.isdigit() or c == ".")
+                    budget_val = float(clean_budget)
+                except ValueError:
+                    budget_val = None
+        else:
+            try:
+                budget_val = float(budget_val)
+            except (ValueError, TypeError):
+                budget_val = None
+
+    def coerce_skills(skills_val):
+        if skills_val is None:
+            return []
+        if isinstance(skills_val, str):
+            skills_val = skills_val.strip()
+            if not skills_val:
+                return []
+            if "," in skills_val:
+                return [s.strip() for s in skills_val.split(",") if s.strip()]
+            return [skills_val]
+        if isinstance(skills_val, list):
+            return [str(s).strip() for s in skills_val if str(s).strip()]
+        return []
+        
+    req_skills = coerce_skills(req.required_skills)
+    nice_skills = coerce_skills(req.nice_to_have_skills)
+    
     # Initialize LangGraph shared state
     initial_state = {
-        "job_id": f"JOB-{str(uuid.uuid4())[:8].upper()}",
+        "job_id": req.job_id or f"JOB-{str(uuid.uuid4())[:8].upper()}",
         "job_order": None,
         "raw_input_jd": req.jd_text,
         "raw_input_resumes": None,
@@ -176,7 +220,13 @@ async def trigger_new_jd_planner(req: IngestJobRequest):
         "evaluated_matches": [],
         "logs": [],
         "errors": [],
-        "current_step": "Ingest"
+        "current_step": "Ingest",
+        "client_name_override": req.client_name,
+        "role_name_override": req.role_name,
+        "budget_max_override": budget_val,
+        "location_override": req.location,
+        "required_skills_override": req_skills,
+        "nice_to_have_skills_override": nice_skills
     }
 
     try:
@@ -187,13 +237,10 @@ async def trigger_new_jd_planner(req: IngestJobRequest):
         if final_state.get("errors"):
             logger.warning(f"Planner finished with non-fatal warnings: {final_state['errors']}")
 
-        # Only hard-fail if the pipeline produced zero candidates AND has critical errors
+        # Never hard-fail with 500 error if there are no candidates matched — return successfully with empty array
         action_cards = final_state.get("evaluated_matches", [])
         if not action_cards and final_state.get("errors"):
-            raise HTTPException(
-                status_code=500,
-                detail=f"Pipeline failed to produce any candidates. Errors: {final_state['errors']}"
-            )
+            logger.warning(f"Pipeline produced zero candidates. Warnings/errors: {final_state['errors']}")
 
         cards_dict = [c.dict() for c in action_cards]
         

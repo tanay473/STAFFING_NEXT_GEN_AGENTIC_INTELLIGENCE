@@ -133,3 +133,39 @@ async def email_webhook_simulation(payload: dict):
     logger.info("Email webhook trigger fired. Forwarding to recruiter digest agent...")
     from backend.api.recruiter_routes import trigger_new_jd_planner, IngestJobRequest
     return await trigger_new_jd_planner(IngestJobRequest(jd_text=email_body))
+
+@router.post("/parse-jd-file")
+async def parse_jd_file(file: UploadFile = File(...)):
+    """Receives JD PDF file, extracts text, runs the structured extraction, and returns it."""
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF job descriptions are supported.")
+
+    temp_path = os.path.join(settings.DATA_DIR, f"temp_{uuid.uuid4()}_{file.filename}")
+    
+    try:
+        # Save temp file
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # 1. Extract text from PDF
+        raw_text = extract_text_from_pdf(temp_path)
+        
+        # 2. Extract structured details using Gemini
+        from backend.tools.jd_extractor import extract_jd_requirements
+        details = extract_jd_requirements(raw_text)
+        
+        return {
+            "status": "success",
+            "jd_text": raw_text,
+            "details": details
+        }
+        
+    except Exception as e:
+        logger.error(f"Error parsing JD PDF: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+        
+    finally:
+        # Clean up temp file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+

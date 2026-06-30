@@ -21,10 +21,10 @@ def run_retrieval_agent(state: AgentState) -> AgentState:
         # 1. Fetch matching candidates by skills from CRM SQLite database
         raw_candidates = search_candidates_crm(skills=job_order.required_skills)
         
-        # If no skill match found, fetch all active candidates as fallback
+        # If no skill match found, do not fallback to all candidates
         if not raw_candidates:
-            state["logs"].append("Retrieval Agent: Lower talent density matched. Expanding fallback pipeline parameters to satisfy SLA criteria.")
-            raw_candidates = search_candidates_crm()
+            state["logs"].append("Retrieval Agent: No candidates found with matching core skills. Halting retrieval to preserve submission quality.")
+            state["errors"].append("No candidates found with matching core skills.")
             
         candidates = [Candidate(**cand) for cand in raw_candidates]
         state["candidates"] = candidates
@@ -34,11 +34,15 @@ def run_retrieval_agent(state: AgentState) -> AgentState:
         # Query semantic memory using client name & role type
         query_str = f"Client: {job_order.client_name} Role: {job_order.role_name}"
         memories = long_term_memory.query(query_str, top_k=5)
+        state["memories"] = memories
         
         # Extract placement histories/rejections
         history_summaries = []
         for mem in memories:
-            history_summaries.append(f"[{mem['metadata'].get('decision', 'Note')}]: {mem['text']}")
+            text = mem.get("text", "")
+            history_summaries.append(text)
+            # Push directly to logs so reasoning agent can scan them
+            state["logs"].append(text)
 
         # Store in state logs for Reasoning node to consume
         state["logs"].append(f"Retrieval Agent: Extracted {len(memories)} client-specific historical preference vectors from memory layer.")

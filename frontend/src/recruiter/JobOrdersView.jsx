@@ -72,7 +72,16 @@ export default function JobOrdersView({ apiHost }) {
       const res = await fetch(`${apiHost}/recruiter/digest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jd_text: order.jd_text })
+        body: JSON.stringify({
+          jd_text: order.jd_text,
+          job_id: order.id,
+          client_name: order.client_name,
+          role_name: order.role_name,
+          budget_max: order.budget_max,
+          location: order.location,
+          required_skills: order.required_skills,
+          nice_to_have_skills: order.nice_to_have_skills
+        })
       });
       const data = await res.json();
       if (data.status === 'success') {
@@ -84,7 +93,7 @@ export default function JobOrdersView({ apiHost }) {
       }
     } catch (e) {
       console.error(e);
-      alert('Error calling matching pipeline.');
+      alert(`Error calling matching pipeline: ${e.message}`);
     } finally {
       setRunningId(null);
     }

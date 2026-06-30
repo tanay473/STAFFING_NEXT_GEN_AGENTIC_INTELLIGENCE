@@ -13,3 +13,12 @@ class AgentState(TypedDict):
     logs: List[str]
     errors: List[str]
     current_step: str
+    client_name_override: Optional[str]
+    role_name_override: Optional[str]
+    budget_max_override: Optional[float]
+    location_override: Optional[str]
+    required_skills_override: Optional[List[str]]
+    nice_to_have_skills_override: Optional[List[str]]
+    memories: Optional[List[Any]]
+
+
